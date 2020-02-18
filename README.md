@@ -14,6 +14,16 @@
 	* [创建与合并分支](#创建与合并分支)
 	* [解决冲突](#解决冲突)
 	* [分支管理策略](#分支管理策略)
+	* [Bug分支](#Bug分支)
+	* [Feature分支](#Feature分支)
+	* [多人协作](#多人协作)
+	* [Rebase](#Rebase)
+	* [标签管理](#标签管理)
+	* [创建标签](#创建标签)
+	* [操作标签](#操作标签)
+	* [使用GitHub](#使用GitHub)
+	* [忽略特殊文件](#忽略特殊文件)
+	* [Git图形界面工具](#Git图形界面工具)
 
 # Git
 [Git维基百科](https://zh.wikipedia.org/wiki/Git "Git维基百科")
@@ -121,3 +131,82 @@ $ git push origin master
 首先，master分支应该是非常稳定的，也就是仅用来发布新版本，平时不能在上面干活；
 那在哪干活呢？干活都在dev分支上，也就是说，dev分支是不稳定的，到某个时候，比如1.0版本发布时，再把dev分支合并到master上，在master分支发布1.0版本；你和你的小伙伴们每个人都在dev分支上干活，每个人都有自己的分支，时不时地往dev分支上合并就可以了。所以，团队合作的分支看起来就像这样：
 ![strategy.jpg](/img/strategy.jpg)
+
+# Bug分支
+* 修复bug时，我们会通过创建新的bug分支进行修复，然后合并，最后删除；
+* 当手头工作没有完成时，先把工作现场```git stash```一下，然后去修复bug，修复后，再```git stash pop```，回到工作现场；
+> 用```git stash list```命令查看保存的工作区和暂存区，工作现场还在，Git把stash内容存在某个地方了，但是需要恢复一下，有两个办法：
+1.```git stash apply```恢复，但是恢复后，stash内容并不删除，你需要用```git stash drop```来删除。
+2.```git stash pop```，恢复的同时把stash内容也删了。
+* 在master分支上修复的bug，想要合并到当前dev分支，可以用```git cherry-pick <commit>```命令，把bug提交的修改“复制”到当前分支，避免重复劳动。
+
+# Feature分支
+* 开发一个新feature，最好新建一个分支；
+* 如果要丢弃一个没有被合并过的分支，可以通过```git branch -D <name>```强行删除。
+
+# 多人协作
+* 推送分支
+	* 推送分支，就是把该分支上的所有本地提交推送到远程库。推送时，要指定本地分支，这样，Git就会把该分支推送到远程库对应的远程分支上：
+	```
+	$ git push origin master
+	```
+	* 如果要推送其他分支，比如dev，就改成：
+	```
+	$ git push origin dev
+	```
+	* 但是，并不是一定要把本地分支往远程推送，那么，哪些分支需要推送，哪些不需要呢？
+		* master分支是主分支，因此要时刻与远程同步；
+		* dev分支是开发分支，团队所有成员都需要在上面工作，所以也需要与远程同步；
+		* bug分支只用于在本地修复bug，就没必要推到远程了，除非老板要看看你每周到底修复了几个bug；
+		* feature分支是否推到远程，取决于你是否和你的小伙伴合作在上面开发。
+* 抓取分支
+	1.首先，可以试图用```git push origin <branch-name>```推送自己的修改；
+	2.如果推送失败，则因为远程分支比你的本地更新，需要先用```git pull```试图合并；
+	3.如果合并有冲突，则解决冲突，并在本地提交；
+	4.没有冲突或者解决掉冲突后，再用```git push origin <branch-name>```推送就能成功！
+	> 如果```git pull```提示no tracking information，则说明本地分支和远程分支的链接关系没有创建，用命令```git branch --set-upstream-to <branch-name> origin/<branch-name>```。
+* 小结
+	* 查看远程库信息，使用```git remote -v```；
+	* 本地新建的分支如果不推送到远程，对其他人就是不可见的；
+	* 从本地推送分支，使用```git push origin branch-name```，如果推送失败，先用git pull抓取远程的新提交；
+	* 在本地创建和远程分支对应的分支，使用```git checkout -b branch-name origin/branch-name```，本地和远程分支的名称最好一致；
+	* 建立本地分支和远程分支的关联，使用```git branch --set-upstream branch-name origin/branch-name```；
+	* 从远程抓取分支，使用git pull，如果有冲突，要先处理冲突。
+
+# Rebase
+* rebase操作可以把本地未push的分叉提交历史整理成直线；
+* rebase的目的是使得我们在查看历史提交的变化时更容易，因为分叉的提交需要三方对比。
+
+# 标签管理
+* 发布一个版本时，我们通常先在版本库中打一个标签（tag），这样，就唯一确定了打标签时刻的版本。将来无论什么时候，取某个标签的版本，就是把那个打标签的时刻的历史版本取出来。所以，标签也是版本库的一个快照。
+* Git的标签虽然是版本库的快照，但其实它就是指向某个commit的指针（跟分支很像对不对？但是分支可以移动，标签不能移动），所以，创建和删除标签都是瞬间完成的。
+> Git有commit，为什么还要引入tag？
+“请把上周一的那个版本打包发布，commit号是6a5819e...”
+“一串乱七八糟的数字不好找！”
+如果换一个办法：
+“请把上周一的那个版本打包发布，版本号是v1.2”
+“好的，按照tag v1.2查找commit就行！”
+所以，tag就是一个让人容易记住的有意义的名字，它跟某个commit绑在一起。
+
+# 创建标签
+* 命令```git tag <tagname> <commit id>```用于新建一个标签，默认为HEAD，也可以指定一个commit id；
+* 命令```git tag -a <tagname> -m "blablabla..." <commit id>```可以指定标签信息；
+* 命令```git tag```可以查看所有标签。
+
+# 操作标签
+* 命令```git push origin <tagname>```可以推送一个本地标签；
+* 命令```git push origin --tags```可以推送全部未推送过的本地标签；
+* 命令```git tag -d <tagname>```可以删除一个本地标签；
+* 命令```git push origin :refs/tags/<tagname>```可以删除一个远程标签。
+
+# 使用GitHub
+* 在GitHub上，可以任意Fork开源仓库；
+* 自己拥有Fork后的仓库的读写权限；
+* 可以推送pull request给官方仓库来贡献代码。
+
+# 忽略特殊文件
+* 忽略某些文件时，需要编写.gitignore；
+* .gitignore文件本身要放到版本库里，并且可以对.gitignore做版本管理！
+
+# Git图形界面工具
+* SourceTree，它是由Atlassian开发的免费Git图形界面工具，可以操作任何Git库。
